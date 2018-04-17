@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Travel modes in directions</title>
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #floating-panel {
+        position: absolute;
+        top: 10px;
+        left: 25%;
+        z-index: 5;
+        background-color: #fff;
+        padding: 5px;
+        border: 1px solid #999;
+        text-align: center;
+        font-family: 'Roboto','sans-serif';
+        line-height: 30px;
+        padding-left: 10px;
+      }
+      #floating-panel textarea {
+        width: 400px;
+        height: 100px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="floating-panel">
+      <div>
+        <textarea id="routes">Sandinostraße,Alexenaderplatz
+S Greifswalder Str.,Potsdamer Platz
+S+U Wedding,U Moritzplatz</textarea>
+      </div>
+      <div>
+        <b>Mode of Travel: </b>
+        <select id="mode">
+          <option value="DRIVING">Driving</option>
+          <option value="WALKING">Walking</option>
+          <option value="BICYCLING">Bicycling</option>
+          <option value="TRANSIT">Transit</option>
+        </select>
+        <input type="button" value="Update" id="update" />
+      </div>
+    </div>
+    <div id="map"></div>
+    <script>
+      var colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+      var renderers = [];
+      function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 14,
+          center: {lat: 52.53, lng: 13.38}
+        });
+      }
+
+      function getRoutes(){
+        return document.getElementById("routes").value.split("\n").map(function(line){
+          var splitted = line.split(",");
+          return {origin: splitted[0], destination: splitted[1]};
+        });
+      }
+
+      function renderRoutes(directionsService, routes){
+        // var request = {
+        //   query: 'sandinostr.',
+        //   location: {lat: 52.53, lng: 13.38},
+        //   radius: 50000,
+        //   type: 'transit_station'
+        // };
+        // var service = new google.maps.places.PlacesService(window.map);
+        // service.textSearch(request, function(response, status) {
+        //   console.log(response);
+        // });
+
+        routes.forEach(function(route, index){
+
+          renderers[index] = new google.maps.DirectionsRenderer({
+            polylineOptions: {
+              strokeColor: colors[index]
+            }
+          });
+          renderers[index].setMap(window.map);
+          directionsService.route({
+            origin: route.origin,
+            destination: route.destination,
+            travelMode: document.getElementById("mode").value
+          }, function(response, status) {
+            if (status === 'OK') {
+              renderers[index].setDirections(response);
+            } else {
+              console.log('Directions request failed', route, status);
+            }
+          });
+        });
+      }
+
+      function clearRoutes(){
+        for (var i = 0; i < renderers.length; i++) {
+          renderers[i].setMap(null);
+        }
+      }
+
+      document.getElementById('update').addEventListener('click', function() {
+        directionsService = new google.maps.DirectionsService;
+        clearRoutes();
+        renderRoutes(directionsService, getRoutes());
+      });
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=&libraries=places&callback=initMap">
+    </script>
+  </body>
+</html>
