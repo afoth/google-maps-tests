@@ -55,13 +55,31 @@ S+U Wedding,U Moritzplatz</textarea>
     </div>
     <div id="map"></div>
     <script>
-      var colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+      var colors = ['#aa0000', '#0000aa', '#00aaaa'];
       var renderers = [];
+      var map, directionsService, transitPolylineOptions, drivingPolylineOptions, routeIndex;
+      
+
       function initMap() {
         map = new google.maps.Map(document.getElementById('map'), {
           zoom: 14,
           center: {lat: 52.53, lng: 13.38}
         });
+        transitPolylineOptions = {};
+        drivingPolylineOptions = {
+          strokeOpacity: 0,
+          fillOpacity: 0,
+          icons: [{
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                fillOpacity: 1,
+                scale: 3
+              },
+              offset: '0',
+              repeat: '10px'
+          }],
+        };
+        directionsService = new google.maps.DirectionsService;
       }
 
       function getRoutes(){
@@ -71,38 +89,33 @@ S+U Wedding,U Moritzplatz</textarea>
         });
       }
 
-      function renderRoutes(directionsService, routes){
-        // var request = {
-        //   query: 'sandinostr.',
-        //   location: {lat: 52.53, lng: 13.38},
-        //   radius: 50000,
-        //   type: 'transit_station'
-        // };
-        // var service = new google.maps.places.PlacesService(window.map);
-        // service.textSearch(request, function(response, status) {
-        //   console.log(response);
-        // });
+      function renderNextRoute(index){
+        if(index < routes.length) {
+          var route = routes[index];
+          var color = colors[index % colors.length]
+          renderRoute(route, color, index, 'TRANSIT');
+          renderRoute(route, color, routes.length+index, 'DRIVING');
+          setTimeout('renderNextRoute('+index+' + 1)', 2000);
+        }
+      }
 
-        routes.forEach(function(route, index){
-
-          renderers[index] = new google.maps.DirectionsRenderer({
-            polylineOptions: {
-              strokeColor: colors[index]
-            }
-          });
+      function renderRoute(route, color, index, mode) {
+          polylineOptions = Object.assign({}, mode === 'TRANSIT' ? transitPolylineOptions : drivingPolylineOptions);
+          polylineOptions['strokeColor'] = color
+          renderers[index] = new google.maps.DirectionsRenderer({polylineOptions: polylineOptions});
           renderers[index].setMap(window.map);
           directionsService.route({
             origin: route.origin,
             destination: route.destination,
-            travelMode: document.getElementById("mode").value
+            travelMode: mode,
+            // travelMode: document.getElementById("mode").value
           }, function(response, status) {
             if (status === 'OK') {
               renderers[index].setDirections(response);
             } else {
-              console.log('Directions request failed', route, status);
+              console.error('Directions request failed', route, status);
             }
           });
-        });
       }
 
       function clearRoutes(){
@@ -112,9 +125,9 @@ S+U Wedding,U Moritzplatz</textarea>
       }
 
       document.getElementById('update').addEventListener('click', function() {
-        directionsService = new google.maps.DirectionsService;
         clearRoutes();
-        renderRoutes(directionsService, getRoutes());
+        window.routes = getRoutes();
+        renderNextRoute(0);
       });
     </script>
     <script async defer
